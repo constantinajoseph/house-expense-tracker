@@ -1,5 +1,6 @@
 import streamlit as st
 from datetime import date
+import pandas as pd
 
 st.title("House Expense Tracker")
 
@@ -13,7 +14,8 @@ if st.button("Save expense"):
     with open("expenses.csv", "a") as file:
         file.write(str(today) + "," + item + "," + category + "," + str(amount) + "\n")
     st.success("Saved: " + item + " - " + str(amount))
-    st.divider()
+
+st.divider()
 st.subheader("This Month's Summary")
 
 this_month = str(date.today())[:7]
@@ -25,31 +27,30 @@ with open("expenses.csv", "r") as file:
         parts = line.strip().split(",")
         if len(parts) == 4:
             day = parts[0]
-            category = parts[2]
+            row_category = parts[2]
             amount_value = float(parts[3])
             if day[:7] == this_month:
                 total = total + amount_value
-                if category in by_category:
-                    by_category[category] = by_category[category] + amount_value
+                if row_category in by_category:
+                    by_category[row_category] = by_category[row_category] + amount_value
                 else:
-                    by_category[category] = amount_value
+                    by_category[row_category] = amount_value
 
 st.write("Total spent:", total)
-for category in by_category:
-    st.write(category, "-", by_category[category])
-    st.divider()
-st.subheader("All Expenses")
+for row_category in by_category:
+    st.write(row_category, "-", by_category[row_category])
 
-import pandas as pd
+st.divider()
+st.subheader("All Expenses")
 
 try:
     data = pd.read_csv("expenses.csv", header=None, names=["Date", "Item", "Category", "Amount"])
     data = data.sort_values("Date", ascending=False)
     st.dataframe(data, width="stretch")
-  )
 except FileNotFoundError:
     st.write("No expenses yet.")
-    st.divider()
+
+st.divider()
 st.subheader("Month-to-Month Comparison")
 
 totals_by_month = {}
