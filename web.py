@@ -1,8 +1,13 @@
 import streamlit as st
 from datetime import date
 import pandas as pd
+import os
 
 st.title("House Expense Tracker")
+
+if not os.path.exists("expenses.csv"):
+    with open("expenses.csv", "w") as file:
+        pass
 
 item = st.text_input("What did you buy?")
 category = st.selectbox("Category", ["groceries", "utilities", "other"])
@@ -47,7 +52,7 @@ try:
     data = pd.read_csv("expenses.csv", header=None, names=["Date", "Item", "Category", "Amount"])
     data = data.sort_values("Date", ascending=False)
     st.dataframe(data, width="stretch")
-except FileNotFoundError:
+except pd.errors.EmptyDataError:
     st.write("No expenses yet.")
 
 st.divider()
@@ -79,4 +84,4 @@ for month in sorted(totals_by_month):
             st.write(month, "-", month_total, "(Same as last month)")
     else:
         st.write(month, "-", month_total)
-    previous = month_total
+    previous = month_totals
