@@ -48,3 +48,33 @@ try:
     st.dataframe(data, use_container_width=True)
 except FileNotFoundError:
     st.write("No expenses yet.")
+    st.divider()
+st.subheader("Month-to-Month Comparison")
+
+totals_by_month = {}
+
+with open("expenses.csv", "r") as file:
+    for line in file:
+        parts = line.strip().split(",")
+        if len(parts) == 4:
+            month = parts[0][:7]
+            amount_value = float(parts[3])
+            if month in totals_by_month:
+                totals_by_month[month] = totals_by_month[month] + amount_value
+            else:
+                totals_by_month[month] = amount_value
+
+previous = None
+for month in sorted(totals_by_month):
+    month_total = totals_by_month[month]
+    if previous is not None:
+        change = month_total - previous
+        if change > 0:
+            st.write(month, "-", month_total, "(Up by", change, ")")
+        elif change < 0:
+            st.write(month, "-", month_total, "(Down by", -change, ")")
+        else:
+            st.write(month, "-", month_total, "(Same as last month)")
+    else:
+        st.write(month, "-", month_total)
+    previous = month_total
