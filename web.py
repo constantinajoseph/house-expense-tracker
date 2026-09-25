@@ -37,3 +37,14 @@ with open("expenses.csv", "r") as file:
 st.write("Total spent:", total)
 for category in by_category:
     st.write(category, "-", by_category[category])
+    st.divider()
+st.subheader("All Expenses")
+
+import pandas as pd
+
+try:
+    data = pd.read_csv("expenses.csv", header=None, names=["Date", "Item", "Category", "Amount"])
+    data = data.sort_values("Date", ascending=False)
+    st.dataframe(data, use_container_width=True)
+except FileNotFoundError:
+    st.write("No expenses yet.")
