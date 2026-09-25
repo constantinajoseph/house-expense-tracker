@@ -45,7 +45,8 @@ import pandas as pd
 try:
     data = pd.read_csv("expenses.csv", header=None, names=["Date", "Item", "Category", "Amount"])
     data = data.sort_values("Date", ascending=False)
-    st.dataframe(data, use_container_width=True)
+    st.dataframe(data, width="stretch")
+  )
 except FileNotFoundError:
     st.write("No expenses yet.")
     st.divider()
