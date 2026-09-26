@@ -219,5 +219,5 @@ for month in sorted(totals_by_month):
             st.write(month, "-", month_total, "(Same as last month)")
     else:
         st.write(month, "-", month_total)
-    previous = month_totalRemove-Item 
+    previous = month_total
 
