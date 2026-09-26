@@ -60,7 +60,8 @@ st.subheader("All Expenses")
 try:
     data = pd.read_csv("expenses.csv", header=None, names=["Date", "Item", "Category", "Amount"])
     data = data.sort_values("Date", ascending=False)
-    st.dataframe(data, width="stretch")
+    data.insert(0, "S.No", range(1, len(data) + 1))
+    st.dataframe(data, width="stretch", hide_index=True)
 except pd.errors.EmptyDataError:
     st.write("No expenses yet.")
 
@@ -112,10 +113,4 @@ for month in sorted(totals_by_month):
         change = month_total - previous
         if change > 0:
             st.write(month, "-", month_total, "(Up by", change, ")")
-        elif change < 0:
-            st.write(month, "-", month_total, "(Down by", -change, ")")
-        else:
-            st.write(month, "-", month_total, "(Same as last month)")
-    else:
-        st.write(month, "-", month_total)
-    previous = month_total
+        elif
