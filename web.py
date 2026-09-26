@@ -2,6 +2,7 @@ import streamlit as st
 from datetime import date
 import pandas as pd
 import os
+import time
 
 st.title("House Expense Tracker")
 
@@ -9,16 +10,24 @@ if not os.path.exists("expenses.csv"):
     with open("expenses.csv", "w") as file:
         pass
 
-item = st.text_input("What did you buy?")
-category = st.selectbox("Category", ["groceries", "utilities", "other"])
-amount = st.number_input("How much did it cost?", min_value=0.0)
+with st.form("expense_form", clear_on_submit=True):
+    item = st.text_input("What did you buy?")
+    category = st.selectbox("Category", ["groceries", "utilities", "other"], index=None, placeholder="Select category")
+    amount = st.number_input("How much did it cost?", min_value=0.0, value=None, placeholder="Enter the amount")
+    submitted = st.form_submit_button("Save expense")
 
-if st.button("Save expense"):
-    item = item.replace(",", " ")
-    today = date.today()
-    with open("expenses.csv", "a") as file:
-        file.write(str(today) + "," + item + "," + category + "," + str(amount) + "\n")
-    st.success("Saved: " + item + " - " + str(amount))
+if submitted:
+    if item and category and amount:
+        item = item.replace(",", " ")
+        today = date.today()
+        with open("expenses.csv", "a") as file:
+            file.write(str(today) + "," + item + "," + category + "," + str(amount) + "\n")
+        message = st.empty()
+        message.success("Saved: " + item + " - " + str(amount))
+        time.sleep(2)
+        message.empty()
+    else:
+        st.warning("Please fill in all fields before saving.")
 
 st.divider()
 st.subheader("This Month's Summary")
@@ -43,7 +52,7 @@ with open("expenses.csv", "r") as file:
 
 st.write("Total spent:", total)
 for row_category in by_category:
-    st.write(row_category, "-", by_category[row_category])
+    st.markdown(f":blue[{row_category}] - **{by_category[row_category]}**")
 
 st.divider()
 st.subheader("All Expenses")
