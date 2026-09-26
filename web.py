@@ -113,4 +113,10 @@ for month in sorted(totals_by_month):
         change = month_total - previous
         if change > 0:
             st.write(month, "-", month_total, "(Up by", change, ")")
-        elif
+        elif change < 0:
+            st.write(month, "-", month_total, "(Down by", -change, ")")
+        else:
+            st.write(month, "-", month_total, "(Same as last month)")
+    else:
+        st.write(month, "-", month_total)
+    previous = month_total
