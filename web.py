@@ -56,6 +56,31 @@ except pd.errors.EmptyDataError:
     st.write("No expenses yet.")
 
 st.divider()
+st.subheader("Delete an Expense")
+
+try:
+    delete_data = pd.read_csv("expenses.csv", header=None, names=["Date", "Item", "Category", "Amount"])
+    if len(delete_data) == 0:
+        st.write("No expenses to delete.")
+    else:
+        options = []
+        for i in range(len(delete_data)):
+            row = delete_data.iloc[i]
+            label = str(row["Date"]) + " - " + str(row["Item"]) + " - " + str(row["Category"]) + " - " + str(row["Amount"])
+            options.append(label)
+
+        choice = st.selectbox("Pick an expense to delete", options)
+
+        if st.button("Delete this expense"):
+            index_to_delete = options.index(choice)
+            delete_data = delete_data.drop(index_to_delete)
+            delete_data.to_csv("expenses.csv", header=False, index=False)
+            st.success("Deleted: " + choice)
+            st.rerun()
+except pd.errors.EmptyDataError:
+    st.write("No expenses to delete.")
+
+st.divider()
 st.subheader("Month-to-Month Comparison")
 
 totals_by_month = {}
