@@ -33,6 +33,11 @@ def house_exists(house_code, users):
             return True
     return False
 
+def save_all_users(users):
+    with open("users.csv", "w") as file:
+        for u in users:
+            file.write(u + "," + users[u]["password"] + "," + users[u]["house"] + "\n")
+
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -42,7 +47,7 @@ if "house_code" not in st.session_state:
 
 if not st.session_state.logged_in:
     st.subheader("Login or Create an Account")
-    tab1, tab2 = st.tabs(["Login", "Sign Up"])
+    tab1, tab2, tab3 = st.tabs(["Login", "Sign Up", "Forgot Password"])
 
     with tab1:
         login_username = st.text_input("Username", key="login_username")
@@ -85,6 +90,25 @@ if not st.session_state.logged_in:
                 st.success("Account created!")
                 time.sleep(1)
                 st.rerun()
+
+    with tab3:
+        st.write("Enter your username and choose a new password.")
+        reset_username = st.text_input("Username", key="reset_username")
+        reset_new_password = st.text_input("New password", type="password", key="reset_new_password")
+        reset_confirm_password = st.text_input("Confirm new password", type="password", key="reset_confirm_password")
+
+        if st.button("Reset Password"):
+            users = load_users()
+            if not reset_username or not reset_new_password:
+                st.warning("Please fill in all fields.")
+            elif reset_username not in users:
+                st.error("No account found with that username.")
+            elif reset_new_password != reset_confirm_password:
+                st.error("Passwords don't match.")
+            else:
+                users[reset_username]["password"] = hash_password(reset_new_password)
+                save_all_users(users)
+                st.success("Password updated! You can log in now.")
 
     st.stop()
 
@@ -220,4 +244,3 @@ for month in sorted(totals_by_month):
     else:
         st.write(month, "-", month_total)
     previous = month_total
-
