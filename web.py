@@ -11,116 +11,110 @@ if not os.path.exists("expenses.csv"):
     with open("expenses.csv", "w") as file:
         pass
 
-if not os.path.exists("users.csv"):
-    with open("users.csv", "w") as file:
+if not os.path.exists("houses.csv"):
+    with open("houses.csv", "w") as file:
         pass
 
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
-def load_users():
-    users = {}
-    with open("users.csv", "r") as file:
+def load_houses():
+    houses = {}
+    with open("houses.csv", "r") as file:
         for line in file:
             parts = line.strip().split(",")
-            if len(parts) == 3:
-                users[parts[0]] = {"password": parts[1], "house": parts[2]}
-    return users
+            if len(parts) == 2:
+                houses[parts[0]] = parts[1]
+    return houses
 
-def house_exists(house_code, users):
-    for u in users:
-        if users[u]["house"] == house_code:
-            return True
-    return False
-
-def save_all_users(users):
-    with open("users.csv", "w") as file:
-        for u in users:
-            file.write(u + "," + users[u]["password"] + "," + users[u]["house"] + "\n")
+def save_all_houses(houses):
+    with open("houses.csv", "w") as file:
+        for h in houses:
+            file.write(h + "," + houses[h] + "\n")
 
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
-if "username" not in st.session_state:
-    st.session_state.username = ""
-if "house_code" not in st.session_state:
-    st.session_state.house_code = ""
+if "house_username" not in st.session_state:
+    st.session_state.house_username = ""
+if "email" not in st.session_state:
+    st.session_state.email = ""
 
 if not st.session_state.logged_in:
-    st.subheader("Login or Create an Account")
-    tab1, tab2, tab3 = st.tabs(["Login", "Sign Up", "Forgot Password"])
+    st.subheader("Login or Create a House Account")
+    tab1, tab2, tab3 = st.tabs(["Login", "Create House", "Forgot Password"])
 
     with tab1:
-        login_username = st.text_input("Username", key="login_username")
-        login_password = st.text_input("Password", type="password", key="login_password")
+        st.write("Log in with your house's shared username and password, and your own email.")
+        login_username = st.text_input("House username", key="login_username")
+        login_password = st.text_input("House password", type="password", key="login_password")
+        login_email = st.text_input("Your email", key="login_email")
         if st.button("Log in"):
-            users = load_users()
-            if login_username in users and users[login_username]["password"] == hash_password(login_password):
+            houses = load_houses()
+            if not login_email:
+                st.warning("Please enter your email.")
+            elif login_username in houses and houses[login_username] == hash_password(login_password):
                 st.session_state.logged_in = True
-                st.session_state.username = login_username
-                st.session_state.house_code = users[login_username]["house"]
+                st.session_state.house_username = login_username
+                st.session_state.email = login_email
                 st.rerun()
             else:
-                st.error("Incorrect username or password.")
+                st.error("Incorrect house username or password.")
 
     with tab2:
-        new_username = st.text_input("Choose a username", key="new_username")
-        new_password = st.text_input("Choose a password", type="password", key="new_password")
+        st.write("Create a new house account. Share this username and password with your housemates.")
+        new_username = st.text_input("Choose a house username", key="new_username")
+        new_password = st.text_input("Choose a house password", type="password", key="new_password")
         confirm_password = st.text_input("Confirm password", type="password", key="confirm_password")
-        house_choice = st.radio("House", ["Create a new house", "Join an existing house"])
-        house_input = st.text_input("House code (make one up, e.g. CHENNAI2026, or enter the one your housemates gave you)")
+        new_email = st.text_input("Your email", key="new_email")
 
-        if st.button("Sign up"):
-            users = load_users()
-            if not new_username or not new_password or not house_input:
+        if st.button("Create House"):
+            houses = load_houses()
+            if not new_username or not new_password or not new_email:
                 st.warning("Please fill in all fields.")
-            elif new_username in users:
-                st.error("That username is already taken.")
+            elif new_username in houses:
+                st.error("That house username is already taken. Choose a different one.")
             elif new_password != confirm_password:
                 st.error("Passwords don't match.")
-            elif house_choice == "Create a new house" and house_exists(house_input, users):
-                st.error("That house code is already taken. Choose a different one, or select 'Join an existing house'.")
-            elif house_choice == "Join an existing house" and not house_exists(house_input, users):
-                st.error("No house found with that code. Check the code, or create a new house.")
             else:
-                with open("users.csv", "a") as file:
-                    file.write(new_username + "," + hash_password(new_password) + "," + house_input + "\n")
+                with open("houses.csv", "a") as file:
+                    file.write(new_username + "," + hash_password(new_password) + "\n")
                 st.session_state.logged_in = True
-                st.session_state.username = new_username
-                st.session_state.house_code = house_input
-                st.success("Account created!")
+                st.session_state.house_username = new_username
+                st.session_state.email = new_email
+                st.success("House created!")
                 time.sleep(1)
                 st.rerun()
 
     with tab3:
-        st.write("Enter your username and choose a new password.")
-        reset_username = st.text_input("Username", key="reset_username")
+        st.write("Enter your house username and choose a new password.")
+        reset_username = st.text_input("House username", key="reset_username")
         reset_new_password = st.text_input("New password", type="password", key="reset_new_password")
         reset_confirm_password = st.text_input("Confirm new password", type="password", key="reset_confirm_password")
 
         if st.button("Reset Password"):
-            users = load_users()
+            houses = load_houses()
             if not reset_username or not reset_new_password:
                 st.warning("Please fill in all fields.")
-            elif reset_username not in users:
-                st.error("No account found with that username.")
+            elif reset_username not in houses:
+                st.error("No house found with that username.")
             elif reset_new_password != reset_confirm_password:
                 st.error("Passwords don't match.")
             else:
-                users[reset_username]["password"] = hash_password(reset_new_password)
-                save_all_users(users)
+                houses[reset_username] = hash_password(reset_new_password)
+                save_all_houses(houses)
                 st.success("Password updated! You can log in now.")
 
     st.stop()
 
-st.write("Logged in as: **" + st.session_state.username + "** (House: " + st.session_state.house_code + ")")
+st.write("Logged in as: **" + st.session_state.email + "** (House: " + st.session_state.house_username + ")")
 if st.button("Log out"):
     st.session_state.logged_in = False
-    st.session_state.username = ""
-    st.session_state.house_code = ""
+    st.session_state.house_username = ""
+    st.session_state.email = ""
     st.rerun()
 
-username = st.session_state.username
-house_code = st.session_state.house_code
+house_username = st.session_state.house_username
+email = st.session_state.email
 
 with st.form("expense_form", clear_on_submit=True):
     item = st.text_input("What did you buy?")
@@ -133,7 +127,7 @@ if submitted:
         item = item.replace(",", " ")
         today = date.today()
         with open("expenses.csv", "a") as file:
-            file.write(house_code + "," + username + "," + str(today) + "," + item + "," + category + "," + str(amount) + "\n")
+            file.write(house_username + "," + email + "," + str(today) + "," + item + "," + category + "," + str(amount) + "\n")
         message = st.empty()
         message.success("Saved: " + item + " - " + str(amount))
         time.sleep(2)
@@ -151,7 +145,7 @@ by_category = {}
 with open("expenses.csv", "r") as file:
     for line in file:
         parts = line.strip().split(",")
-        if len(parts) == 6 and parts[0] == house_code:
+        if len(parts) == 6 and parts[0] == house_username:
             day = parts[2]
             row_category = parts[4]
             amount_value = float(parts[5])
@@ -171,7 +165,7 @@ st.subheader("All Expenses")
 
 try:
     all_data = pd.read_csv("expenses.csv", header=None, names=["House", "Added By", "Date", "Item", "Category", "Amount"])
-    data = all_data[all_data["House"] == house_code].drop(columns=["House"])
+    data = all_data[all_data["House"] == house_username].drop(columns=["House"])
     data = data.sort_values("Date", ascending=False)
     data.insert(0, "S.No", range(1, len(data) + 1))
     st.dataframe(data, width="stretch", hide_index=True)
@@ -183,7 +177,7 @@ st.subheader("Delete an Expense")
 
 try:
     all_data = pd.read_csv("expenses.csv", header=None, names=["House", "Added By", "Date", "Item", "Category", "Amount"])
-    delete_data = all_data[all_data["House"] == house_code].reset_index(drop=True)
+    delete_data = all_data[all_data["House"] == house_username].reset_index(drop=True)
     if len(delete_data) == 0:
         st.write("No expenses to delete.")
     else:
@@ -222,7 +216,7 @@ totals_by_month = {}
 with open("expenses.csv", "r") as file:
     for line in file:
         parts = line.strip().split(",")
-        if len(parts) == 6 and parts[0] == house_code:
+        if len(parts) == 6 and parts[0] == house_username:
             month = parts[2][:7]
             amount_value = float(parts[5])
             if month in totals_by_month:
