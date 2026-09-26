@@ -3,6 +3,7 @@ from datetime import date
 import pandas as pd
 import os
 import time
+import hashlib
 
 st.title("House Expense Tracker")
 
@@ -10,15 +11,87 @@ if not os.path.exists("expenses.csv"):
     with open("expenses.csv", "w") as file:
         pass
 
+if not os.path.exists("users.csv"):
+    with open("users.csv", "w") as file:
+        pass
+
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def load_users():
+    users = {}
+    with open("users.csv", "r") as file:
+        for line in file:
+            parts = line.strip().split(",")
+            if len(parts) == 3:
+                users[parts[0]] = {"password": parts[1], "house": parts[2]}
+    return users
+
+def house_exists(house_code, users):
+    for u in users:
+        if users[u]["house"] == house_code:
+            return True
+    return False
+
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "username" not in st.session_state:
+    st.session_state.username = ""
 if "house_code" not in st.session_state:
     st.session_state.house_code = ""
 
-house_code = st.text_input("Enter your house code (share this with your housemates)", value=st.session_state.house_code)
-st.session_state.house_code = house_code
+if not st.session_state.logged_in:
+    st.subheader("Login or Create an Account")
+    tab1, tab2 = st.tabs(["Login", "Sign Up"])
 
-if not house_code:
-    st.info("Please enter a house code above to continue. Use the same code as your housemates to share expenses.")
+    with tab1:
+        login_username = st.text_input("Username", key="login_username")
+        login_password = st.text_input("Password", type="password", key="login_password")
+        if st.button("Log in"):
+            users = load_users()
+            if login_username in users and users[login_username]["password"] == hash_password(login_password):
+                st.session_state.logged_in = True
+                st.session_state.username = login_username
+                st.session_state.house_code = users[login_username]["house"]
+                st.rerun()
+            else:
+                st.error("Incorrect username or password.")
+
+    with tab2:
+        new_username = st.text_input("Choose a username", key="new_username")
+        new_password = st.text_input("Choose a password", type="password", key="new_password")
+        confirm_password = st.text_input("Confirm password", type="password", key="confirm_password")
+        house_choice = st.radio("House", ["Create a new house", "Join an existing house"])
+        house_input = st.text_input("House code (make one up, or enter the one your housemates gave you)")
+
+        if st.button("Sign up"):
+            users = load_users()
+            if not new_username or not new_password or not house_input:
+                st.warning("Please fill in all fields.")
+            elif new_username in users:
+                st.error("That username is already taken.")
+            elif new_password != confirm_password:
+                st.error("Passwords don't match.")
+            elif house_choice == "Create a new house" and house_exists(house_input, users):
+                st.error("That house code is already taken. Choose a different one, or select 'Join an existing house'.")
+            elif house_choice == "Join an existing house" and not house_exists(house_input, users):
+                st.error("No house found with that code. Check with your housemates, or create a new house.")
+            else:
+                with open("users.csv", "a") as file:
+                    file.write(new_username + "," + hash_password(new_password) + "," + house_input + "\n")
+                st.success("Account created! Please log in using the Login tab.")
+
     st.stop()
+
+st.write("Logged in as: **" + st.session_state.username + "** (House: " + st.session_state.house_code + ")")
+if st.button("Log out"):
+    st.session_state.logged_in = False
+    st.session_state.username = ""
+    st.session_state.house_code = ""
+    st.rerun()
+
+username = st.session_state.username
+house_code = st.session_state.house_code
 
 with st.form("expense_form", clear_on_submit=True):
     item = st.text_input("What did you buy?")
@@ -31,7 +104,7 @@ if submitted:
         item = item.replace(",", " ")
         today = date.today()
         with open("expenses.csv", "a") as file:
-            file.write(house_code + "," + str(today) + "," + item + "," + category + "," + str(amount) + "\n")
+            file.write(house_code + "," + username + "," + str(today) + "," + item + "," + category + "," + str(amount) + "\n")
         message = st.empty()
         message.success("Saved: " + item + " - " + str(amount))
         time.sleep(2)
@@ -49,10 +122,10 @@ by_category = {}
 with open("expenses.csv", "r") as file:
     for line in file:
         parts = line.strip().split(",")
-        if len(parts) == 5 and parts[0] == house_code:
-            day = parts[1]
-            row_category = parts[3]
-            amount_value = float(parts[4])
+        if len(parts) == 6 and parts[0] == house_code:
+            day = parts[2]
+            row_category = parts[4]
+            amount_value = float(parts[5])
             if day[:7] == this_month:
                 total = total + amount_value
                 if row_category in by_category:
@@ -68,9 +141,8 @@ st.divider()
 st.subheader("All Expenses")
 
 try:
-    data = pd.read_csv("expenses.csv", header=None, names=["House", "Date", "Item", "Category", "Amount"])
-    data = data[data["House"] == house_code]
-    data = data.drop(columns=["House"])
+    all_data = pd.read_csv("expenses.csv", header=None, names=["House", "Added By", "Date", "Item", "Category", "Amount"])
+    data = all_data[all_data["House"] == house_code].drop(columns=["House"])
     data = data.sort_values("Date", ascending=False)
     data.insert(0, "S.No", range(1, len(data) + 1))
     st.dataframe(data, width="stretch", hide_index=True)
@@ -81,7 +153,7 @@ st.divider()
 st.subheader("Delete an Expense")
 
 try:
-    all_data = pd.read_csv("expenses.csv", header=None, names=["House", "Date", "Item", "Category", "Amount"])
+    all_data = pd.read_csv("expenses.csv", header=None, names=["House", "Added By", "Date", "Item", "Category", "Amount"])
     delete_data = all_data[all_data["House"] == house_code].reset_index(drop=True)
     if len(delete_data) == 0:
         st.write("No expenses to delete.")
@@ -89,7 +161,7 @@ try:
         options = []
         for i in range(len(delete_data)):
             row = delete_data.iloc[i]
-            label = str(row["Date"]) + " - " + str(row["Item"]) + " - " + str(row["Category"]) + " - " + str(row["Amount"])
+            label = str(row["Date"]) + " - " + str(row["Item"]) + " - " + str(row["Category"]) + " - " + str(row["Amount"]) + " (added by " + str(row["Added By"]) + ")"
             options.append(label)
 
         choice = st.selectbox("Pick an expense to delete", options)
@@ -99,6 +171,7 @@ try:
             row_to_remove = delete_data.iloc[index_to_delete]
             match = (
                 (all_data["House"] == row_to_remove["House"]) &
+                (all_data["Added By"] == row_to_remove["Added By"]) &
                 (all_data["Date"] == row_to_remove["Date"]) &
                 (all_data["Item"] == row_to_remove["Item"]) &
                 (all_data["Category"] == row_to_remove["Category"]) &
@@ -120,9 +193,9 @@ totals_by_month = {}
 with open("expenses.csv", "r") as file:
     for line in file:
         parts = line.strip().split(",")
-        if len(parts) == 5 and parts[0] == house_code:
-            month = parts[1][:7]
-            amount_value = float(parts[4])
+        if len(parts) == 6 and parts[0] == house_code:
+            month = parts[2][:7]
+            amount_value = float(parts[5])
             if month in totals_by_month:
                 totals_by_month[month] = totals_by_month[month] + amount_value
             else:
