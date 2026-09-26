@@ -41,7 +41,7 @@ if "email" not in st.session_state:
 
 if not st.session_state.logged_in:
     st.subheader("Login or Create a House Account")
-    tab1, tab2, tab3 = st.tabs(["Login", "Create House", "Forgot Password"])
+    tab1, tab2 = st.tabs(["Login", "Create House"])
 
     with tab1:
         st.write("Log in with your house's shared username and password, and your own email.")
@@ -59,6 +59,24 @@ if not st.session_state.logged_in:
                 st.rerun()
             else:
                 st.error("Incorrect house username or password.")
+
+        with st.expander("Forgot password?"):
+            reset_username = st.text_input("House username", key="reset_username")
+            reset_new_password = st.text_input("New password", type="password", key="reset_new_password")
+            reset_confirm_password = st.text_input("Confirm new password", type="password", key="reset_confirm_password")
+
+            if st.button("Reset Password"):
+                houses = load_houses()
+                if not reset_username or not reset_new_password:
+                    st.warning("Please fill in all fields.")
+                elif reset_username not in houses:
+                    st.error("No house found with that username.")
+                elif reset_new_password != reset_confirm_password:
+                    st.error("Passwords don't match.")
+                else:
+                    houses[reset_username] = hash_password(reset_new_password)
+                    save_all_houses(houses)
+                    st.success("Password updated! You can log in now.")
 
     with tab2:
         st.write("Create a new house account. Share this username and password with your housemates.")
@@ -84,25 +102,6 @@ if not st.session_state.logged_in:
                 st.success("House created!")
                 time.sleep(1)
                 st.rerun()
-
-    with tab3:
-        st.write("Enter your house username and choose a new password.")
-        reset_username = st.text_input("House username", key="reset_username")
-        reset_new_password = st.text_input("New password", type="password", key="reset_new_password")
-        reset_confirm_password = st.text_input("Confirm new password", type="password", key="reset_confirm_password")
-
-        if st.button("Reset Password"):
-            houses = load_houses()
-            if not reset_username or not reset_new_password:
-                st.warning("Please fill in all fields.")
-            elif reset_username not in houses:
-                st.error("No house found with that username.")
-            elif reset_new_password != reset_confirm_password:
-                st.error("Passwords don't match.")
-            else:
-                houses[reset_username] = hash_password(reset_new_password)
-                save_all_houses(houses)
-                st.success("Password updated! You can log in now.")
 
     st.stop()
 
